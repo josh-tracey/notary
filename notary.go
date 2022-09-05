@@ -6,7 +6,7 @@ type Notary struct {
 	secret string
 }
 
-func NewNotary(secret string) *Notary {
+func New(secret string) *Notary {
 	return &Notary{secret: secret}
 }
 
@@ -20,7 +20,7 @@ func (n *Notary) VerifyToken(token string) (bool, error) {
 	return true, nil
 }
 
-func (n *Notary) SignToken(secret string) (string, error) {
+func (n *Notary) NewSignedToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	tokenString, err := token.SignedString([]byte(n.secret))
 	if err != nil {
