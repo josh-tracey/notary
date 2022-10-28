@@ -1,16 +1,35 @@
 package notary
 
-import "github.com/golang-jwt/jwt/v4"
+import (
+	"crypto/rsa"
 
-type Notary struct {
+	"github.com/golang-jwt/jwt/v4"
+)
+
+type Notary interface {
+	VerifyToken(token string) (bool, error)
+	NewSignedToken() (string, error)
+	isNotary()
+}
+
+type NotaryHS256 struct {
 	secret string
 }
 
-func New(secret string) *Notary {
-	return &Notary{secret: secret}
+type NotaryRS256 struct {
+	privateKey *rsa.PrivateKey
+	publicKey  *rsa.PublicKey
 }
 
-func (n *Notary) VerifyToken(token string) (bool, error) {
+func NewHS256(secret string) *NotaryHS256 {
+
+	notary := &NotaryHS256{secret}
+	return notary
+}
+
+func (n *NotaryHS256) isNotary() {}
+
+func (n *NotaryHS256) VerifyToken(token string) (bool, error) {
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return []byte(n.secret), nil
 	})
@@ -20,9 +39,37 @@ func (n *Notary) VerifyToken(token string) (bool, error) {
 	return true, nil
 }
 
-func (n *Notary) NewSignedToken() (string, error) {
+func (n *NotaryHS256) NewSignedToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	tokenString, err := token.SignedString([]byte(n.secret))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func NewRS256(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) *NotaryRS256 {
+
+	notary := &NotaryRS256{privateKey, publicKey}
+
+	return notary
+}
+
+func (n *NotaryRS256) isNotary() {}
+
+func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
+	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return n.publicKey, nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (n *NotaryRS256) NewSignedToken() (string, error) {
+	token := jwt.New(jwt.SigningMethodRS256)
+	tokenString, err := token.SignedString(n.privateKey)
 	if err != nil {
 		return "", err
 	}
