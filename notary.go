@@ -30,6 +30,9 @@ func NewHS256(secret string) *NotaryHS256 {
 func (n *NotaryHS256) isNotary() {}
 
 func (n *NotaryHS256) VerifyToken(token string) (bool, error) {
+	if token == "" {
+		return false, nil
+	}
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return []byte(n.secret), nil
 	})
@@ -58,6 +61,9 @@ func NewRS256(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) *NotaryRS256
 func (n *NotaryRS256) isNotary() {}
 
 func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
+	if token == "" {
+		return false, nil
+	}
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return n.publicKey, nil
 	})
