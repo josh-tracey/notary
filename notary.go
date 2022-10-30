@@ -65,7 +65,7 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 		return false, nil
 	}
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return n.publicKey, nil
+		return n.privateKey.PublicKey, nil
 	})
 	if err != nil {
 		return false, err
