@@ -72,7 +72,7 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 		if !token.Valid {
 			return nil, errors.New("invalid token")
 		}
-		return n.publicKey, nil
+		return n.privateKey, nil
 	})
 	if err != nil {
 		return false, err
