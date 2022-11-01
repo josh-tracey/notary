@@ -3,6 +3,7 @@ package notary
 import (
 	"crypto/rsa"
 	"fmt"
+	"log"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -73,7 +74,10 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 			return nil, fmt.Errorf("unexpected method: %s", token.Header["alg"])
 		}
 
-		return *n.publicKey, nil
+		log.Printf("%v", n.privateKey.PublicKey)
+		log.Printf("%v", n.privateKey.Public())
+
+		return n.privateKey.Public(), nil
 	})
 	if err != nil {
 		return false, err
