@@ -3,7 +3,6 @@ package notary
 import (
 	"crypto/rsa"
 	"fmt"
-	"log"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -19,8 +18,8 @@ type NotaryHS256 struct {
 }
 
 type NotaryRS256 struct {
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	privateKey rsa.PrivateKey
+	publicKey  rsa.PublicKey
 }
 
 func NewHS256(secret string) *NotaryHS256 {
@@ -58,7 +57,7 @@ func NewRS256(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) *NotaryRS256
 	PrivateKey := *privateKey
 	PublicKey := *publicKey
 
-	notary := &NotaryRS256{privateKey: &PrivateKey, publicKey: &PublicKey}
+	notary := &NotaryRS256{privateKey: PrivateKey, publicKey: PublicKey}
 
 	return notary
 }
@@ -70,16 +69,12 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 		return false, nil
 	}
 
-	privateKey := *n.privateKey
-
-	log.Println("privateKey", privateKey)
-
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected method: %s", token.Header["alg"])
 		}
 
-		return privateKey.PublicKey, nil
+		return n.privateKey.PublicKey, nil
 	})
 	if err != nil {
 		return false, err
