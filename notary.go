@@ -84,7 +84,7 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 
 func (n *NotaryRS256) NewSignedToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodRS256)
-	tokenString, err := token.SignedString(n.privateKey)
+	tokenString, err := token.SignedString(&n.privateKey)
 	if err != nil {
 		return "", err
 	}
