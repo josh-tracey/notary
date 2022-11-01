@@ -74,7 +74,7 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 			return nil, fmt.Errorf("unexpected method: %s", token.Header["alg"])
 		}
 
-		return n.privateKey.PublicKey, nil
+		return &n.privateKey.PublicKey, nil
 	})
 	if err != nil {
 		return false, err
