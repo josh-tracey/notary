@@ -69,15 +69,17 @@ func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
 	if token == "" {
 		return false, nil
 	}
+
+	privateKey := *n.privateKey
+
+	log.Println("privateKey", privateKey)
+
 	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected method: %s", token.Header["alg"])
 		}
 
-		log.Printf("%v", n.privateKey.PublicKey)
-		log.Printf("%v", n.privateKey.Public())
-
-		return n.privateKey.Public(), nil
+		return privateKey.PublicKey, nil
 	})
 	if err != nil {
 		return false, err
