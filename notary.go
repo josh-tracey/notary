@@ -1,8 +1,8 @@
 package notary
 
 import (
-	"crypto/rsa"
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 )
@@ -18,8 +18,8 @@ type NotaryHS256 struct {
 }
 
 type NotaryRS256 struct {
-	privateKey rsa.PrivateKey
-	publicKey  rsa.PublicKey
+	privateKey []byte
+	publicKey  []byte
 }
 
 func NewHS256(secret string) *NotaryHS256 {
@@ -31,6 +31,7 @@ func NewHS256(secret string) *NotaryHS256 {
 func (n *NotaryHS256) isNotary() {}
 
 func (n *NotaryHS256) VerifyToken(token string) (bool, error) {
+
 	if token == "" {
 		return false, nil
 	}
@@ -44,6 +45,7 @@ func (n *NotaryHS256) VerifyToken(token string) (bool, error) {
 }
 
 func (n *NotaryHS256) NewSignedToken() (string, error) {
+
 	token := jwt.New(jwt.SigningMethodHS256)
 	tokenString, err := token.SignedString([]byte(n.secret))
 	if err != nil {
@@ -52,41 +54,67 @@ func (n *NotaryHS256) NewSignedToken() (string, error) {
 	return tokenString, nil
 }
 
-func NewRS256(privateKey *rsa.PrivateKey, publicKey *rsa.PublicKey) *NotaryRS256 {
+func NewRS256(privateKey []byte, publicKey []byte) *NotaryRS256 {
 
-	PrivateKey := *privateKey
-	PublicKey := *publicKey
-
-	notary := &NotaryRS256{privateKey: PrivateKey, publicKey: PublicKey}
+	notary := &NotaryRS256{privateKey: privateKey, publicKey: publicKey}
 
 	return notary
 }
 
 func (n *NotaryRS256) isNotary() {}
 
-func (n *NotaryRS256) VerifyToken(token string) (bool, error) {
-	if token == "" {
-		return false, nil
+func (n *NotaryRS256) VerifyToken(token *string) (interface{}, error) {
+
+	key, err := jwt.ParseRSAPublicKeyFromPEM(n.publicKey)
+	if err != nil {
+		return "", fmt.Errorf("create: parse key: %w", err)
 	}
 
-	_, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	if token == nil {
+		return "", fmt.Errorf("Token is nil")
+	}
+
+	if *token == "" {
+		return "", nil
+	}
+
+	tok, err2 := jwt.Parse(*token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected method: %s", token.Header["alg"])
 		}
 
-		return &n.publicKey, nil
+		return key, nil
 	})
-	if err != nil {
-		return false, err
+
+	if err2 != nil {
+		return nil, err
 	}
-	return true, nil
+	claims, ok := tok.Claims.(jwt.MapClaims)
+	if !ok || !tok.Valid {
+		return nil, fmt.Errorf("validate: invalid")
+	}
+
+	return claims["dat"], nil
 }
 
-func (n *NotaryRS256) NewSignedToken() (string, error) {
-	token := jwt.New(jwt.SigningMethodRS256)
-	tokenString, err := token.SignedString(&n.privateKey)
+func (n *NotaryRS256) NewSignedToken(ttl time.Duration, content interface{}) (string, error) {
+	key, err := jwt.ParseRSAPrivateKeyFromPEM(n.privateKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("create: parse key: %w", err)
 	}
-	return tokenString, nil
+
+	now := time.Now().UTC()
+
+	claims := make(jwt.MapClaims)
+	claims["dat"] = content             // Our custom data.
+	claims["exp"] = now.Add(ttl).Unix() // The expiration time after which the token must be disregarded.
+	claims["iat"] = now.Unix()          // The time at which the token was issued.
+	claims["nbf"] = now.Unix()          // The time before which the token must be disregarded.
+
+	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(key)
+	if err != nil {
+		return "", fmt.Errorf("create: sign token: %w", err)
+	}
+
+	return token, nil
 }
